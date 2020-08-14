@@ -28,5 +28,5 @@ Messages can also be received. Received messages will be sent to the MQTT topic 
 ## Docker
 A docker file provided to build a docker image.
 
-Run `docker build -t smshandler .` to create a docker image.
-Run `docker run smshandler` to start a docker container from the image.
+Run `sudo docker build -t smshandler .` to create a docker image.
+Run `sudo docker run -d --name smshandler --device /dev/ttyUSB2:/dev/ttyUSB2 smshandler` to start a docker container from the image. Make sure to find out what tty your modem uses. You could use this guide to tie your modem to always use the same device, https://unix.stackexchange.com/questions/66901/how-to-bind-usb-device-under-a-static-name.
