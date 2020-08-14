@@ -22,7 +22,7 @@ Set config parameters to tty for the modems serial interface as well as paramete
 The number will be translated to +xxxxxxxxxxx, no plus sign in the topic
 
 ## Receive sms 
-Messages can also be received. Received messages will be sent to the MQTT topic '/smsreceived' on the format b'{"from":"+NUMBER","datetime":"2020-08-14 18:44:52+02:00","text":"Sms message"}'. +NUMBER will be replaced by a name if the NUMBER is available in the phonebook.
+Messages can also be received. Received messages will be sent to the MQTT topic '/smsreceived' on the format `b'{"from":"+NUMBER","datetime":"2020-08-14 18:44:52+02:00","text":"Sms message"}'`. +NUMBER will be replaced by a name if the NUMBER is available in the phonebook.
 
 
 ## Docker
