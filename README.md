@@ -28,5 +28,5 @@ Messages can also be received. Received messages will be sent to the MQTT topic 
 ## Docker
 A docker file provided to build a docker image.
 
-Run 'docker build -t smshandler .' to create a docker image.
-Run 'docker run smshandler' to start a docker container from the image.
+Run `docker build -t smshandler .` to create a docker image.
+Run `docker run smshandler` to start a docker container from the image.
