@@ -13,33 +13,25 @@ from __future__ import print_function
 import time, logging, sys
 import paho.mqtt.client as mqtt
 from gsmmodem.modem import GsmModem
-
-### User defined settings
-
-PORT = '/dev/ttyUSB1'   # Set to tty that the GSM modem is connected to
-BAUDRATE = 115200       # Set to GSM modem's baud rate, normally 115200baud
-PIN = 0000              # Set to SIM card's PIN #
-RECEIPT = True          # Set to True to send a receipt back when SMS is received, set to False to do nothing
-
-MQTTSERVER = "hassio"    # Set to host/ip that the MQTT server is running on
-MQTTPORT = 1883             # Set to port that the MQTT server is listening on
-MQTTUSER = "user"       # Set to MQTT username
-MQTTPASS = "pass"       # Set to MQTT password
-
-phonebook = {"name1":"+46XXXXXXXXX", "name2":"+45XXXXXXXXXX"}    # Phonebook example, pairs of name and phonenumber
-
-### End of user defined settings
+from configparser import ConfigParser
 
 modem = ""
 client = mqtt.Client()
+config = ConfigParser()
+
+phonebook = {}
 
 def SendSms(to, text):
+    # Print log screen
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + " Sending:   " + text)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + " Recipient: " + to)
     print("===")
+
+    # Send the sms via modem
     modem.sendSms(to, text)
 
 def on_mqtt_connect(client, userdata, flags, rc):
+    # Print status message and subscribe to sms topic
     print("Connected with result code "+str(rc))
     client.subscribe("/sms/#")
 
@@ -67,14 +59,17 @@ def on_gsm_handleSms(sms):
             if smsFrom == phonebook[key]:
                 smsFrom = key
 
+    # Print log to screen
     print(u'== SMS message received ==')
     print(u'From...: ' + str(smsFrom))
     print(u'Time...: ' + str(sms.time))
     print(u'Message: ' + str(sms.text))
 
+    # Send sms contents to MQTT
     client.publish('/smsreceived', u'{"from":"' + smsFrom + '","datetime":"' + str(sms.time) + '","text":"' + sms.text + '"}')
 
-    if RECEIPT:
+    # Respond to sender if receipts are configured
+    if config.getboolean('modem', 'receipt'):
         print('Replying to SMS...')
         sms.reply(u'SMS received: "{0}{1}"'.format(sms.text[:20], '...' if len(sms.text) > 20 else ''))
         print('SMS sent.')
@@ -83,18 +78,23 @@ def on_gsm_handleSms(sms):
 
 def main():
     global modem
-    print('Initializing modem...')
+    global phonebook
 
-    # Uncomment the following line to see what the modem is doing:
-    #logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
+    config.read('config.ini')
+
+    # Create the phonebook
+    tmpPhonebook = config.items('phonebook')
+    for row in tmpPhonebook:
+        phonebook[row[0]] = row[1]
 
     # Initialize the modem
-    modem = GsmModem(PORT, BAUDRATE, smsReceivedCallbackFunc=on_gsm_handleSms)
+    print('Initializing modem...')
+    modem = GsmModem(config.get('modem', 'port'), config.getint('modem', 'baudrate'), smsReceivedCallbackFunc=on_gsm_handleSms)
     modem.smsTextMode = True
 
-    print(PIN)
+    # Connect to the modem
     try:
-        modem.connect(PIN)
+        modem.connect(config.get('modem', 'pin'))
     except PinRequiredError:
         print('Pin required')
         sys.exit(1)
@@ -116,8 +116,8 @@ def main():
     client.on_connect = on_mqtt_connect
     client.on_message = on_mqtt_message
 
-    client.username_pw_set(MQTTUSER, MQTTPASS)
-    client.connect(MQTTSERVER, MQTTPORT, 60)
+    client.username_pw_set(config.get('mqtt', 'user'), config.get('mqtt', 'pass'))
+    client.connect(config.get('mqtt', 'server'), config.getint('mqtt', 'port'), 60)
 
     client.loop_start()
 
